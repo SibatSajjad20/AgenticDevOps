@@ -5,8 +5,15 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-supabase = create_client(os.getenv("SUPABASE_URL"), os.getenv("SUPABASE_SERVICE_KEY"))
-_model = SentenceTransformer("all-MiniLM-L6-v2")  # 384-dim, runs fully local, no API
+def get_supabase():
+    url = os.getenv("SUPABASE_URL")
+    key = os.getenv("SUPABASE_SERVICE_KEY")
+    if not url or not key:
+        raise ValueError("SUPABASE_URL or SUPABASE_SERVICE_KEY is missing from environment")
+    return create_client(url, key)
+
+# Initialize the model but let supabase be lazy
+_model = SentenceTransformer("all-MiniLM-L6-v2")
 
 def embed(text: str) -> list[float]:
     return _model.encode(text).tolist()
@@ -30,6 +37,7 @@ def ingest_repo(repo_url: str, files: dict[str, str]):
                 "embedding": embed(chunk)
             })
 
+    supabase = get_supabase()
     supabase.table("repo_chunks").delete().eq("repo_url", repo_url).execute()
     for i in range(0, len(rows), 50):
         supabase.table("repo_chunks").insert(rows[i:i+50]).execute()
