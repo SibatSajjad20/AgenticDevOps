@@ -11,3 +11,4 @@ supabase
 sse-starlette
 sentence-transformers
 google-genai
+gunicorn
