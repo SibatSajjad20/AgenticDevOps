@@ -1,0 +1,770 @@
+app.tsx
+import { useState, useCallback } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import { 
+  Github, 
+  Cpu, 
+  Brain, 
+  Sparkles, 
+  Code2, 
+  Linkedin, 
+  BookOpen, 
+  HelpCircle,
+  ArrowRight,
+  RefreshCcw,
+  AlertCircle
+} from 'lucide-react';
+import { cn } from './lib/utils';
+import { ThreeCanvas } from './components/ThreeCanvas';
+import { Terminal } from './components/Terminal';
+import { fetchRepoContents } from './services/githubService';
+import { analyzeRepo, AnalysisResults } from './services/geminiService';
+
+export default function App() {
+  const [url, setUrl] = useState('');
+  const [isPoetic, setIsPoetic] = useState(false);
+  const [aiMode, setAiMode] = useState<'gemini' | 'ollama'>('gemini');
+  const [logs, setLogs] = useState<string[]>([]);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [results, setResults] = useState<AnalysisResults | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const addLog = useCallback((msg: string) => {
+    setLogs(prev => [...prev, `[${new Date().toLocaleTimeString()}] ${msg}`]);
+  }, []);
+
+  const handleStart = async () => {
+    if (!url.includes('github.com')) {
+      setError('Please enter a valid GitHub URL');
+      return;
+    }
+
+    setError(null);
+    setIsAnalyzing(true);
+    setResults(null);
+    setLogs([]);
+    
+    try {
+      addLog('Agent Mission: Initializing analysis sequence...');
+      const files = await fetchRepoContents(url, addLog);
+      
+      if (aiMode === 'ollama') {
+        addLog('Ollama mode requested. Shifting to local inference... (Note: This is a demo placeholder, real Ollama requires a local endpoint)');
+      }
+
+      const analysis = await analyzeRepo(files, isPoetic, addLog);
+      setResults(analysis);
+      addLog('Mission Success: Portfolio package delivered.');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An unexpected error occurred');
+      addLog(`Critical Failure: ${err instanceof Error ? err.message : 'Unknown Error'}`);
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
+  return (
+    <div className="relative min-h-screen text-white selection:bg-blue-500/30 selection:text-blue-200">
+      <ThreeCanvas />
+
+      {/* Header */}
+      <header className="absolute top-0 w-full p-6 flex items-center justify-between z-20 container mx-auto">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-indigo-600 rounded-lg flex items-center justify-center shadow-[0_0_20px_rgba(79,70,229,0.4)]">
+            <Cpu size={24} className="text-white" />
+          </div>
+          <h1 className="text-xl font-bold tracking-tight text-white">Agentic<span className="text-indigo-400">DevOps</span></h1>
+        </div>
+        
+        {!results && !isAnalyzing && (
+          <div className="flex items-center gap-4 text-[10px] font-mono text-slate-500 uppercase tracking-widest hidden md:flex">
+            <span className="flex items-center gap-1.5"><div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" /> System Operational</span>
+            <span className="opacity-40">|</span>
+            <span>Latency: 42ms</span>
+          </div>
+        )}
+
+        {results && (
+          <div className="flex-1 max-w-xl mx-8 hidden md:block">
+            <div className="relative">
+              <input 
+                type="text" 
+                value={url}
+                onChange={(e) => setUrl(e.target.value)}
+                placeholder="https://github.com/username/repo" 
+                className="w-full bg-[#16161A] border border-slate-800 rounded-full py-2 px-6 text-sm focus:outline-none focus:border-indigo-500 transition-colors shadow-inner"
+              />
+              <button 
+                onClick={handleStart}
+                className="absolute right-1 top-1 bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-1 rounded-full text-xs font-semibold transition-all shadow-lg"
+              >
+                Re-Analyze
+              </button>
+            </div>
+          </div>
+        )}
+
+        <div className="flex items-center gap-4">
+          <div className="flex bg-[#16161A] p-1 rounded-lg border border-slate-800">
+            <button 
+              onClick={() => setAiMode('gemini')}
+              className={cn("px-3 py-1 text-[10px] uppercase font-bold rounded transition-all", aiMode === 'gemini' ? "bg-indigo-600 text-white" : "text-slate-500 hover:text-slate-300")}
+            >Gemini</button>
+            <button 
+              onClick={() => setAiMode('ollama')}
+              className={cn("px-3 py-1 text-[10px] uppercase font-bold rounded transition-all", aiMode === 'ollama' ? "bg-indigo-600 text-white" : "text-slate-500 hover:text-slate-300")}
+            >Ollama</button>
+          </div>
+        </div>
+      </header>
+
+      <main className="container mx-auto px-6 pt-32 pb-12 relative z-10 max-w-6xl h-[calc(100vh-140px)] flex flex-col">
+        <AnimatePresence mode="wait">
+          {!results && !isAnalyzing ? (
+            <motion.div
+              key="hero"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 1.05 }}
+              className="flex-1 flex flex-col items-center justify-center text-center max-w-4xl mx-auto"
+            >
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mb-6 px-4 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-[10px] uppercase font-bold tracking-[0.2em]"
+              >
+                Multi-Agent Portfolio Intelligence
+              </motion.div>
+
+              <h2 className="text-6xl md:text-8xl font-bold tracking-tighter mb-8 bg-gradient-to-b from-white to-slate-500 bg-clip-text text-transparent leading-[0.9]">
+                CODE INTO<br />CONTENT.
+              </h2>
+              
+              <p className="text-slate-400 text-lg mb-12 max-w-xl leading-relaxed">
+                Automated technical analysis, branding, and career preparation powered by specialized neural agents.
+              </p>
+
+              <div className="w-full max-w-xl space-y-6">
+                <div className="relative group">
+                  <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-full blur opacity-25 group-focus-within:opacity-50 transition duration-1000"></div>
+                  <div className="relative bg-[#16161A] border border-slate-800 rounded-full p-2 flex items-center gap-2 shadow-2xl transition-all">
+                    <div className="pl-4 text-slate-500"><Github size={20} /></div>
+                    <input
+                      type="text"
+                      value={url}
+                      onChange={(e) => setUrl(e.target.value)}
+                      placeholder="Paste GitHub Repository URL..."
+                      className="flex-1 bg-transparent border-none outline-none text-white py-4 px-2 text-lg placeholder:text-slate-700"
+                    />
+                    <button
+                      onClick={handleStart}
+                      className="bg-indigo-600 text-white font-bold h-14 px-10 rounded-full flex items-center gap-2 hover:bg-indigo-500 transition-all shadow-lg active:scale-95 whitespace-nowrap"
+                    >
+                      START MISSION <ArrowRight size={20} />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap justify-center gap-4">
+                  <button 
+                    onClick={() => setIsPoetic(!isPoetic)}
+                    className={cn(
+                      "flex items-center gap-2 px-5 py-2 rounded-lg border transition-all text-[11px] font-bold uppercase tracking-wider", 
+                      isPoetic ? "bg-indigo-600 border-indigo-500 text-white shadow-[0_0_15px_rgba(79,70,229,0.3)]" : "bg-slate-900/50 border-slate-800 text-slate-500 hover:text-slate-300"
+                    )}
+                  >
+                    <Sparkles size={14} /> Poetic Mode: {isPoetic ? 'ON' : 'OFF'}
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          ) : isAnalyzing ? (
+            <motion.div
+              key="analyzing"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="flex-1 grid grid-cols-12 grid-rows-6 gap-4"
+            >
+              <div className="col-span-8 row-span-4">
+                <Terminal logs={logs} />
+              </div>
+              
+              <div className="col-span-4 row-span-2 bg-gradient-to-br from-[#16161A] to-[#0F0F12] border border-slate-800 rounded-2xl p-6 flex flex-col justify-center items-center text-center space-y-4">
+                <div className="w-16 h-16 rounded-full border border-indigo-500/20 flex items-center justify-center bg-indigo-500/5">
+                  <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 3, repeat: Infinity, ease: 'linear' }}
+                  >
+                    <RefreshCcw size={32} className="text-indigo-500" />
+                  </motion.div>
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold uppercase tracking-wider text-white">Initializing Engine</h3>
+                  <p className="text-[10px] text-slate-500 uppercase mt-1">Agent Sync in progress...</p>
+                </div>
+                <div className="w-full bg-slate-800 h-1 rounded-full overflow-hidden">
+                  <motion.div 
+                    initial={{ width: 0 }}
+                    animate={{ width: "70%" }}
+                    className="bg-indigo-600 h-full shadow-[0_0_10px_#6366f1]" 
+                  />
+                </div>
+              </div>
+
+              <div className="col-span-4 row-span-4 bg-[#16161A] border border-slate-800 rounded-2xl flex items-center justify-center">
+                <div className="text-center opacity-20">
+                  <Brain size={64} className="mx-auto mb-4" />
+                  <p className="text-[10px] font-mono uppercase tracking-[0.3em]">Knowledge Extraction</p>
+                </div>
+              </div>
+
+              <div className="col-span-8 row-span-2 bg-[#0F0F12] border border-slate-800 rounded-2xl flex items-center justify-center">
+                <div className="text-center opacity-20">
+                  <Code2 size={48} className="mx-auto mb-4" />
+                  <p className="text-[10px] font-mono uppercase tracking-[0.3em]">Codebase Semantic Mapping</p>
+                </div>
+              </div>
+            </motion.div>
+          ) : results && (
+            <motion.div
+              key="results"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex-1 grid grid-cols-12 grid-rows-6 gap-4"
+            >
+              {/* Terminal */}
+              <div className="col-span-8 row-span-4">
+                <Terminal logs={logs} />
+              </div>
+
+              {/* Ecosystem */}
+              <section className="col-span-4 row-span-2 bg-gradient-to-br from-[#16161A] to-[#0F0F12] border border-slate-800 rounded-2xl p-5 flex flex-col">
+                <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-4">Detected Ecosystem</h3>
+                <div className="grid grid-cols-2 gap-3 flex-1">
+                  {results.techStack.slice(0, 4).map((stack, i) => (
+                    <div key={stack} className="bento-inner-card p-3 rounded-xl flex items-center gap-3">
+                      <div className="w-8 h-8 rounded bg-indigo-500/10 flex items-center justify-center text-indigo-400 text-[10px] font-bold">
+                        {stack.substring(0, 2).toUpperCase()}
+                      </div>
+                      <div>
+                        <p className="text-[11px] font-bold text-white truncate w-24">{stack}</p>
+                        <p className="text-[9px] text-slate-500 uppercase tracking-tighter">Stack Module</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+
+              {/* Marketing Kit */}
+              <section className="col-span-4 row-span-4 bg-[#16161A] border border-slate-800 rounded-2xl flex flex-col overflow-hidden">
+                <div className="p-4 border-b border-slate-800 flex justify-between items-center">
+                  <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider">Marketing Kit</h3>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] text-indigo-400 font-bold uppercase">Poetic</span>
+                    <div className={cn(
+                      "w-8 h-4 rounded-full relative transition-colors",
+                      isPoetic ? "bg-indigo-600" : "bg-slate-700"
+                    )}>
+                      <div className={cn(
+                        "absolute top-0.5 w-3 h-3 bg-white rounded-full transition-all",
+                        isPoetic ? "right-0.5" : "left-0.5"
+                      )}></div>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex-1 p-4 overflow-y-auto terminal-scroll">
+                  <div className="bg-black/30 rounded-lg p-4 text-[12px] leading-relaxed text-slate-300 border border-slate-800/50 italic font-serif">
+                    {results.linkedInPost}
+                  </div>
+                </div>
+                <div className="p-4 bg-black/20">
+                  <button 
+                    onClick={() => navigator.clipboard.writeText(results.linkedInPost)}
+                    className="w-full py-2 bg-slate-800 hover:bg-slate-700 text-[10px] font-bold rounded-lg transition-colors border border-slate-700 uppercase tracking-widest"
+                  >
+                    Copy to Clipboard
+                  </button>
+                </div>
+              </section>
+
+              {/* Interview Prep */}
+              <section className="col-span-8 row-span-2 bg-[#0F0F12] border border-slate-800 rounded-2xl p-5 flex flex-col overflow-hidden">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider">Interview Intelligence</h3>
+                  <span className="px-2 py-0.5 bg-green-500/10 text-green-400 text-[10px] rounded border border-green-500/20 font-bold uppercase">Agent Certified</span>
+                </div>
+                <div className="grid grid-cols-2 gap-4 flex-1 overflow-y-auto terminal-scroll pr-2">
+                  {results.interviewPrep.slice(0, 4).map((item, i) => (
+                    <div key={i} className="bento-inner-card p-3 rounded-xl">
+                      <p className="text-[11px] font-bold text-white mb-1 line-clamp-1">Q: {item.question}</p>
+                      <p className="text-[9px] text-slate-500 line-clamp-2">{item.answerBrief}</p>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </main>
+
+      {/* Footer Status */}
+      <footer className="fixed bottom-0 w-full bg-black/40 border-t border-slate-800 p-4 z-20 backdrop-blur-md">
+        <div className="container mx-auto flex items-center justify-between text-[10px] text-slate-600 font-mono">
+          <div className="flex gap-6">
+            <div className="flex items-center gap-2">
+              <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span> 
+              System Ready
+            </div>
+            <div className="hidden sm:block">UPTIME: 99.9%</div>
+            <div className="hidden sm:block">AGENTS: 3 Active</div>
+          </div>
+          <div className="uppercase tracking-[0.2em] opacity-40">Portfolio Builder v1.0.4 - AgenticDevOps</div>
+        </div>
+      </footer>
+    </div>
+  );
+}
+components/terminal
+import { motion, AnimatePresence } from 'motion/react';
+import { Terminal as TerminalIcon, ChevronRight } from 'lucide-react';
+import { useEffect, useRef } from 'react';
+import { cn } from '../lib/utils';
+
+interface TerminalProps {
+  logs: string[];
+}
+
+export function Terminal({ logs }: TerminalProps) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [logs]);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="bg-[#0F0F12] border border-slate-800 rounded-2xl overflow-hidden flex flex-col h-full shadow-2xl relative"
+    >
+      <div className="flex items-center gap-2 p-4 border-b border-slate-800 pb-2">
+        <div className="flex gap-1.5">
+          <div className="w-2.5 h-2.5 rounded-full bg-red-500/20 border border-red-500/50"></div>
+          <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/20 border border-yellow-500/50"></div>
+          <div className="w-2.5 h-2.5 rounded-full bg-green-500/20 border border-green-500/50"></div>
+        </div>
+        <span className="text-slate-500 text-[10px] uppercase tracking-widest ml-2">Agent Process Monitor</span>
+      </div>
+      <div 
+        ref={scrollRef}
+        className="flex-1 p-4 font-mono text-[13px] overflow-y-auto terminal-scroll bg-black/40"
+      >
+        <AnimatePresence mode="popLayout">
+          {logs.map((log, i) => (
+            <motion.div
+              key={`${log}-${i}`}
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="flex items-start gap-3 mb-1.5 leading-relaxed"
+            >
+              <span className="text-indigo-400 shrink-0 select-none">[{new Date().toLocaleTimeString([], { hour12: false })}]</span>
+              <span className={cn(
+                "font-bold shrink-0",
+                log.includes('AGT-1') ? "text-blue-400" : 
+                log.includes('AGT-2') ? "text-green-400" :
+                log.includes('AGT-3') ? "text-purple-400" :
+                log.includes('Failure') || log.includes('Error') ? "text-red-400" : "text-blue-400"
+              )}>
+                {log.includes('Agent 1') ? 'AGT-1' : log.includes('Agent 2') ? 'AGT-2' : log.includes('Agent 3') ? 'AGT-3' : 'SYS'}
+              </span>
+              <span className={cn(
+                log.includes('Failure') || log.includes('Error') ? 'text-red-400' : 'text-slate-400'
+              )}>
+                {log}
+              </span>
+            </motion.div>
+          ))}
+        </AnimatePresence>
+        {logs.length === 0 && (
+          <div className="text-slate-600 italic">Waiting for mission start...</div>
+        )}
+      </div>
+      <div className="absolute bottom-[-20px] right-[-20px] w-40 h-40 bg-indigo-600/5 blur-[60px] rounded-full pointer-events-none"></div>
+    </motion.div>
+  );
+}
+components/threeCanvas
+import { useRef, useMemo } from 'react';
+import { Canvas, useFrame, useThree } from '@react-three/fiber';
+import { Float, Stars, PerspectiveCamera } from '@react-three/drei';
+import * as THREE from 'three';
+
+function Particles() {
+  const count = 1500;
+  const points = useMemo(() => {
+    const p = new Float32Array(count * 3);
+    for (let i = 0; i < count; i++) {
+      p[i * 3] = (Math.random() - 0.5) * 15;
+      p[i * 3 + 1] = (Math.random() - 0.5) * 15;
+      p[i * 3 + 2] = (Math.random() - 0.5) * 15;
+    }
+    return p;
+  }, []);
+
+  const ref = useRef<THREE.Points>(null);
+
+  useFrame((state) => {
+    if (ref.current) {
+      ref.current.rotation.y = state.clock.elapsedTime * 0.02;
+      ref.current.rotation.x = state.clock.elapsedTime * 0.01;
+      
+      const mouse = state.mouse;
+      ref.current.position.x = THREE.MathUtils.lerp(ref.current.position.x, mouse.x * 0.5, 0.1);
+      ref.current.position.y = THREE.MathUtils.lerp(ref.current.position.y, mouse.y * 0.5, 0.1);
+    }
+  });
+
+  return (
+    <points ref={ref}>
+      <bufferGeometry>
+        <bufferAttribute
+          attach="attributes-position"
+          count={count}
+          array={points}
+          itemSize={3}
+        />
+      </bufferGeometry>
+      <pointsMaterial
+        size={0.015}
+        color="#4f46e5"
+        transparent
+        opacity={0.4}
+        sizeAttenuation
+      />
+    </points>
+  );
+}
+
+function FloatingCube({ position, color, size = 1, rotationSpeed = 1 }: { position: [number, number, number], color: string, size?: number, rotationSpeed?: number }) {
+  const meshRef = useRef<THREE.Mesh>(null);
+  
+  useFrame((state) => {
+    if (meshRef.current) {
+      meshRef.current.rotation.x += 0.005 * rotationSpeed;
+      meshRef.current.rotation.y += 0.005 * rotationSpeed;
+      
+      const mouse = state.mouse;
+      meshRef.current.position.x = THREE.MathUtils.lerp(meshRef.current.position.x, position[0] + mouse.x * 0.2, 0.1);
+      meshRef.current.position.y = THREE.MathUtils.lerp(meshRef.current.position.y, position[1] + mouse.y * 0.2, 0.1);
+    }
+  });
+
+  return (
+    <Float speed={2} rotationIntensity={0.5} floatIntensity={0.5}>
+      <mesh ref={meshRef} position={position}>
+        <boxGeometry args={[size, size, size]} />
+        <meshStandardMaterial color={color} wireframe transparent opacity={0.2} />
+      </mesh>
+    </Float>
+  );
+}
+
+function Scene() {
+  const { viewport } = useThree();
+  
+  return (
+    <>
+      <PerspectiveCamera makeDefault position={[0, 0, 8]} />
+      <ambientLight intensity={0.2} />
+      <spotLight position={[10, 10, 10]} angle={0.15} penumbra={1} intensity={1} />
+      <pointLight position={[-10, -10, -10]} color="purple" intensity={1} />
+      
+      <Stars radius={100} depth={50} count={2000} factor={4} saturation={0} fade speed={1} />
+      <Particles />
+      
+      {/* Dynamic Grid */}
+      <gridHelper args={[100, 50, '#111', '#050505']} position={[0, -10, 0]} rotation={[0.2, 0, 0]} />
+
+      <FloatingCube position={[-4, 2, -2]} color="#4f46e5" size={0.5} rotationSpeed={2} />
+      <FloatingCube position={[4, -2, -3]} color="#06b6d4" size={0.8} rotationSpeed={1.5} />
+      <FloatingCube position={[-5, -3, -1]} color="#8b5cf6" size={0.4} rotationSpeed={3} />
+      <FloatingCube position={[3, 3, -4]} color="#ec4899" size={0.6} rotationSpeed={1.2} />
+    </>
+  );
+}
+
+export function ThreeCanvas() {
+  return (
+    <div className="fixed inset-0 -z-10 bg-[#000000]">
+      <Canvas dpr={[1, 2]}>
+        <Scene />
+      </Canvas>
+      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-black/20 to-black pointer-events-none" />
+    </div>
+  );
+}
+index.css
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+:root {
+  --background: 240 10% 4%;
+  --foreground: 210 40% 98%;
+  --card: 240 10% 8%;
+  --card-foreground: 210 40% 98%;
+  --popover: 240 10% 5%;
+  --popover-foreground: 210 40% 98%;
+  --primary: 239 84% 67%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 240 3.7% 15.9%;
+  --secondary-foreground: 0 0% 98%;
+  --muted: 240 3.7% 15.9%;
+  --muted-foreground: 215 20% 65%;
+  --accent: 239 84% 67%;
+  --accent-foreground: 0 0% 100%;
+  --destructive: 0 62.8% 30.6%;
+  --destructive-foreground: 0 0% 98%;
+  --border: 215 25% 15%;
+  --input: 215 25% 15%;
+  --ring: 239 84% 67%;
+  --radius: 1rem;
+}
+
+@layer base {
+  * {
+    border-color: rgba(51, 65, 85, 0.4);
+  }
+  body {
+    background-color: #0A0A0C;
+    color: #E2E8F0;
+    font-family: var(--font-sans);
+  }
+}
+
+.terminal-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+
+.terminal-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.terminal-scroll::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 2px;
+}
+
+.glass-card {
+  background: #16161A;
+  border: 1px solid rgba(51, 65, 85, 0.5);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+}
+
+.bento-inner-card {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+services/geminiService
+import { GoogleGenAI, Type } from "@google/genai";
+import { RepoFile } from "./githubService";
+
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+
+export interface AnalysisResults {
+  techStack: string[];
+  designPatterns: string[];
+  bugs: string[];
+  readme: string;
+  linkedInPost: string;
+  interviewPrep: { question: string; context: string; answerBrief: string }[];
+}
+
+export async function analyzeRepo(files: RepoFile[], poeticMode: boolean, onStatus: (msg: string) => void): Promise<AnalysisResults> {
+  onStatus("Initializing AI Agent team...");
+  const model = "gemini-3-flash-preview";
+
+  const codebaseContext = files.map(f => `FILE: ${f.path}\nCONTENT:\n${f.content}\n---`).join('\n');
+
+  onStatus("Agent 1 (Architect) is analyzing tech stack & patterns...");
+  
+  const architectPrompt = `
+    Analyze the following codebase and provide a JSON response with:
+    1. techStack: list of main technologies used.
+    2. designPatterns: list of design patterns or architectural decisions identified.
+    3. bugs: identifying potential bugs or areas of improvement (at least 3).
+
+    Codebase:
+    ${codebaseContext}
+  `;
+
+  const architectResponse = await ai.models.generateContent({
+    model,
+    contents: architectPrompt,
+    config: {
+      responseMimeType: "application/json",
+      responseSchema: {
+        type: Type.OBJECT,
+        properties: {
+          techStack: { type: Type.ARRAY, items: { type: Type.STRING } },
+          designPatterns: { type: Type.ARRAY, items: { type: Type.STRING } },
+          bugs: { type: Type.ARRAY, items: { type: Type.STRING } },
+        },
+        required: ["techStack", "designPatterns", "bugs"]
+      }
+    }
+  });
+
+  const architectData = JSON.parse(architectResponse.text);
+
+  onStatus("Agent 2 (Marketer) is drafting README & Socials...");
+
+  const marketerPrompt = `
+    Based on the identified tech stack (${architectData.techStack.join(', ')}) and project structure, generate:
+    1. A professional README.md content.
+    2. A catchy LinkedIn post. ${poeticMode ? "CRITICAL: The LinkedIn post MUST include a short Urdu/Hindi couplet or poetry relevant to code/hard work/automation." : ""}
+
+    Codebase Context:
+    ${codebaseContext}
+  `;
+
+  const marketerResponse = await ai.models.generateContent({
+    model,
+    contents: marketerPrompt,
+    config: {
+      responseMimeType: "application/json",
+      responseSchema: {
+        type: Type.OBJECT,
+        properties: {
+          readme: { type: Type.STRING },
+          linkedInPost: { type: Type.STRING },
+        },
+        required: ["readme", "linkedInPost"]
+      }
+    }
+  });
+
+  const marketerData = JSON.parse(marketerResponse.text);
+
+  onStatus("Agent 3 (Interviewer) is generating prep sheet...");
+
+  const interviewerPrompt = `
+    Generate 10 hard interview questions specifically about this codebase. 
+    Each question should reference specific logic, files, or architectural decisions made in the repo.
+    Return a list of objects with 'question', 'context' (where in code this logic is), and 'answerBrief'.
+
+    Codebase:
+    ${codebaseContext}
+  `;
+
+  const interviewerResponse = await ai.models.generateContent({
+    model,
+    contents: interviewerPrompt,
+    config: {
+      responseMimeType: "application/json",
+      responseSchema: {
+        type: Type.OBJECT,
+        properties: {
+          interviewPrep: {
+            type: Type.ARRAY,
+            items: {
+              type: Type.OBJECT,
+              properties: {
+                question: { type: Type.STRING },
+                context: { type: Type.STRING },
+                answerBrief: { type: Type.STRING }
+              },
+              required: ["question", "context", "answerBrief"]
+            }
+          }
+        },
+        required: ["interviewPrep"]
+      }
+    }
+  });
+
+  const interviewerData = JSON.parse(interviewerResponse.text);
+
+  onStatus("Analysis complete. Compiling report...");
+
+  return {
+    ...architectData,
+    ...marketerData,
+    ...interviewerData
+  };
+}
+services/githubService
+export interface RepoFile {
+  path: string;
+  content: string;
+  type: 'file' | 'dir';
+}
+
+export async function fetchRepoContents(repoUrl: string, onStatus: (msg: string) => void): Promise<RepoFile[]> {
+  const match = repoUrl.match(/github\.com\/([^/]+)\/([^/]+)/);
+  if (!match) throw new Error('Invalid GitHub URL');
+
+  const [_, owner, repo] = match;
+  onStatus(`Connecting to ${owner}/${repo}...`);
+
+  try {
+    // Get the default branch first
+    const repoResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}`);
+    if (!repoResponse.ok) throw new Error('Repo not found or private');
+    const repoData = await repoResponse.json();
+    const branch = repoData.default_branch;
+
+    onStatus(`Scanning repository tree (${branch} branch)...`);
+    
+    // Get the full tree recursively
+    const treeResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/trees/${branch}?recursive=1`);
+    if (!treeResponse.ok) throw new Error('Failed to fetch repo tree');
+    const treeData = await treeResponse.json();
+
+    const files: RepoFile[] = [];
+    const importantExtensions = ['.ts', '.tsx', '.js', '.jsx', '.py', '.go', '.rs', '.java', '.cpp', '.md', '.json', '.env.example', '.yml', '.yaml'];
+    const skipDirs = ['node_modules', '.git', 'dist', 'build', '.next', 'out', 'vendor'];
+
+    // Limit the number of files to fetch to avoid blowing up the context or hitting rate limits too hard
+    const maxFiles = 25;
+    let fetchedCount = 0;
+
+    onStatus(`Filtering project structure...`);
+
+    for (const item of treeData.tree) {
+      if (item.type === 'blob') {
+        const isSkip = skipDirs.some(dir => item.path.includes(dir));
+        const isImportant = importantExtensions.some(ext => item.path.endsWith(ext));
+        
+        if (!isSkip && isImportant && fetchedCount < maxFiles) {
+          onStatus(`Fetching: ${item.path}`);
+          const contentResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${item.path}`);
+          if (contentResponse.ok) {
+            const contentData = await contentResponse.json();
+            // contentData.content is base64 encoded
+            const decodedContent = atob(contentData.content.replace(/\n/g, ''));
+            files.push({
+              path: item.path,
+              content: decodedContent,
+              type: 'file'
+            });
+            fetchedCount++;
+          }
+        }
+      }
+    }
+
+    onStatus(`Successfully extracted ${files.length} core files.`);
+    return files;
+  } catch (error) {
+    onStatus(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    throw error;
+  }
+}

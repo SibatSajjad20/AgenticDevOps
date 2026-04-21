@@ -1,0 +1,13 @@
+fastapi
+uvicorn[standard]
+python-dotenv
+httpx
+pydantic
+crewai
+crewai-tools
+langchain-google-genai
+langchain-community
+supabase
+sse-starlette
+sentence-transformers
+google-genai
